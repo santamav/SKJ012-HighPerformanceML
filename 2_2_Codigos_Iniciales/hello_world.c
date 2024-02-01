@@ -8,6 +8,7 @@ int main(int argc, char *argv[]) {
   if (argc == 2) {
     int param1 = atoi(argv[1]);
     // omp_XXX_XXXX(yyy);
+    omp_set_num_threads(param1);
   } else if (argc > 2) {
     printf("Wrong number of parameters\n");
     printf("./a.out [ num_threads ]\n");
@@ -18,11 +19,10 @@ int main(int argc, char *argv[]) {
 #pragma omp parallel default(none)
   {
     // Get the thread id
-    int rank = ...
+    int rank = omp_get_thread_num();
     // Get the number of threads
-    int size = ...
+    int size = omp_get_num_threads();
 
     printf("Hello from thread %d of %d\n", rank, size);
   }
 }
-
