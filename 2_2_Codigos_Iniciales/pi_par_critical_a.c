@@ -58,17 +58,26 @@ int main(int argc, char *argv[]) {
   }
   
   t1 = omp_get_wtime();
+  pi = 0.0; // Reset pi value to start the accumulation
 #pragma omp parallel default(none) \
-                     shared(...)
+                     shared(size, num_steps, step, pi)
   {
      int rank = omp_get_thread_num();
      int size = omp_get_num_threads();
 
     // Accumulating on pi the computation of each thread
-    // TODO:
-    
+    #pragma omp for
+    for(int i=0; i<num_steps; i++){
+      double x = (i+0.5)*step;
+      // Mark critical section and accumulate on pi
+      #pragma omp critical
+      pi += (4.0/(1.0+x*x));
+    }
   }
-  t2 = omp_get_wtttime();
+
+  // Multiply pi by step to compute the final pi value
+  pi *= step;
+  t2 = omp_get_wtime();
   t_par = t2 - t1; // Compute parallel time
   sp = t_seq / t_par; // Compute speedup
   ep = sp / size; // Compute efficiency
