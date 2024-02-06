@@ -71,7 +71,6 @@ int main(int argc, char *argv[]) {
     pi_vector[rank] = 0.0;
     #pragma omp for
     for (int i=0; i<num_steps; i++){
-//    for (int i=rank; i<num_steps; i+=size){
       double x = (i+0.5)*step;
       pi_vector[rank] += 4.0/(1.0+x*x);
     }
@@ -87,8 +86,8 @@ int main(int argc, char *argv[]) {
 
   t2 = omp_get_wtime();
   t_par = t2-t1; // Compute the time from start to end of the thread
-  //sp = ...
-  //ep = ...
+  sp = t_seq / t_par; // Speedup
+  ep = sp / size; // Efficiency
 
   printf(" pi_par = %20.15f\n", pi);
   printf(" time_par = %20.15f, Sp = %20.15f , Ep = %20.15f\n", t_par, sp, ep);
