@@ -33,14 +33,14 @@ int main(int argc, char *argv[]) {
   // Sequential implementation
   //
   double x, sum = 0.0;
-  t1 = ....
+  t1 = omp_get_wtime();
   step = 1.0 / (double) num_steps;  
   for (i=0; i<num_steps; i++){
-     x = (i+0.5)*step;
-     sum = sum + 4.0/(1.0+x*x);
+    x = (i+0.5)*step;
+    sum = sum + 4.0/(1.0+x*x);
   }
   pi = step * sum;
-  t2 = ...
+  t2 = omp_get_wtime();
   t_seq = (t2-t1);
 
   printf(" pi_seq = %20.15f\n", pi);
@@ -54,23 +54,30 @@ int main(int argc, char *argv[]) {
   int size = 0;
 #pragma omp parallel default(none) shared(size)
   {
-    size = ...
+    size = omp_get_num_threads();
   }
   
-  t1 = ...
+  pi = 0.0;
+  t1 = omp_get_wtime();
 #pragma omp parallel default(none) \
-                     shared(...)
+                     shared(size, num_steps, step, pi)
   {
-     int rank = ...
-     int size = ...
+    int rank = omp_get_thread_num();
+    int size = omp_get_num_threads();
 
-    // Accumulating on pi the computation of each thread
-    // ...
+    # pragma omp for
+    for (int i = 0; i < num_steps; i++) {
+      double x = (i + 0.5) * step;
+      # pragma omp atomic
+      pi += 4.0 / (1.0 + x * x);
+    }
   }
-  t2 = ...
-  t_par = ...
-  sp = ...
-  ep = ...
+
+  pi *= step;
+  t2 = omp_get_wtime();
+  t_par = t2 - t1;
+  sp = t_seq / t_par;
+  ep = sp / size;
 
   printf(" pi_par = %20.15f\n", pi);
   printf(" time_par = %20.15f, Sp = %20.15f , Ep = %20.15f\n", t_par, sp, ep);

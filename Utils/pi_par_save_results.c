@@ -16,15 +16,11 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < sizeof(nums) / sizeof(nums[0]); i++) {
             // Construct the command string with parameters
             char command[100];  // Adjust the size based on your needs
+            printf("Executing with %d threads and %d rectangles\n", size, nums[i]);
             snprintf(command, sizeof(command), "../2_2_Codigos_Iniciales/a.out %d %d", size, nums[i]);
 
             // Use the system function to execute the command
             int result = system(command);
-            if (result == 0) {
-                printf("Command executed successfully.\n");
-            } else {
-                printf("Error executing command.\n");
-            }
         }
     }
 }

@@ -65,28 +65,22 @@ int main(int argc, char *argv[]) {
     int rank = omp_get_thread_num();
     int size = omp_get_num_threads();
 
-    // Accumulating on pi the computation of each thread
-
-    // Loop for each thread, don't know if I should use this or the pragma omp for
-    double x, sum = 0.0;
-    pi = 0.0;
-    for(int i=rank; i<num_steps; i+=size){
-      x = (i+0.5)*step;
-      sum += 4.0/(1.0+x*x);
+    double sum = 0.0; 
+    # pragma omp for
+    for (int i = 0; i < num_steps; i++) {
+      double x = (i + 0.5) * step;
+      sum += 4.0 / (1.0 + x * x);
     }
 
-    // Mark critical section and accumulate on auxiliar variable on pi
-    #pragma omp critical
+    # pragma omp atomic
     pi += sum;
   }
 
-  // Compute the final value for pi
   pi *= step;
-
   t2 = omp_get_wtime();
-  t_par = t2 - t1; // Compute parallel time
-  sp = t_seq / t_par; // Compute speedup
-  ep = sp / size; // Compute efficiency
+  t_par = t2 - t1;
+  sp = t_seq / t_par;
+  ep = sp / size;
 
   printf(" pi_par = %20.15f\n", pi);
   printf(" time_par = %20.15f, Sp = %20.15f , Ep = %20.15f\n", t_par, sp, ep);
