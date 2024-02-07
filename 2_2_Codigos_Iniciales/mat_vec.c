@@ -48,14 +48,14 @@ int main(int argc, char *argv[]) {
   //
   // Sequential implementation
   //
-  t1 = ...
+  t1 = omp_get_wtime();
 	for (i=0; i<M; i++) {
 		y[i] = 0;
 	  for (j=0; j<N; j++) {
 			y[i] += A[i][j] * x[j];
 		}
 	}
-  t2 = ...
+  t2 = omp_get_wtime();
   t_seq = (t2-t1);
 
 	sum_seq = 0.0;
@@ -72,40 +72,57 @@ int main(int argc, char *argv[]) {
 
   // Defining the number of active threads
   int size = 0;
-#pragma omp parallel default(none) shared(size)
+#pragma omp parallel default(none) shared(size) // Should probably use the single directive so this is only executed by one of the threads
   {
-    size = ...
+    size = omp_get_num_threads();
   }
   
-  t1 = ...
+  t1 = omp_get_wtime();
 	// Including the parallel for in the external loop
-	// ...
-  t2 = ...
-  t_par = ...
-  sp = ...
-  ep = ...
+  #pragma omp parallel for default(none) shared(A, x, y, M, N)
+	for (int i=0; i<M; i++) {
+		double sum = 0;
+	  for (int j=0; j<N; j++) {
+			sum += A[i][j] * x[j];
+		}
+    y[i] = sum;
+	}
+
+  t2 = omp_get_wtime();
+  t_par = t2-t1;
+  sp = t_seq/t_par;
+  ep = sp/size;
 
 	sum_par = 0.0;
 	for (i=0; i<M; i++) {
 		sum_par += y[i];
 	}
 
+  printf("External loop\n");
   printf(" sum_par = %20.15f , diff = %20.15e\n", sum_par, sum_seq-sum_par);
   printf(" time_par = %20.15f, Sp = %20.15f , Ep = %20.15f\n", t_par, sp, ep);
 
-  t1 = ...
+  t1 = omp_get_wtime();
 	// Including the parallel for in the internal loop
-	// ...
-  t2 = ...
-  t_par = ...
-  sp = ...
-  ep = ...
+	for (int i=0; i<M; i++) {
+		double sum = 0;
+    #pragma omp parallel for default(none) shared(A, x, y, M, N, i) reduction(+:sum)
+	  for (int j=0; j<N; j++) {
+			sum += A[i][j] * x[j];
+		}
+    y[i] = sum;
+	}
+  t2 = omp_get_wtime();
+  t_par = t2-t1;
+  sp = t_seq/t_par;
+  ep = sp/size;
 
 	sum_par = 0.0;
 	for (i=0; i<M; i++) {
 		sum_par += y[i];
 	}
 
+  printf("Internal loop\n");
   printf(" sum_par = %20.15f , diff = %20.15e\n", sum_par, sum_seq-sum_par);
   printf(" time_par = %20.15f, Sp = %20.15f , Ep = %20.15f\n", t_par, sp, ep);
 }
