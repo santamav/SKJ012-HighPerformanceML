@@ -79,10 +79,10 @@ int main(int argc, char *argv[]) {
   
   t1 = omp_get_wtime();
 	// Including the parallel for in the external loop
-  #pragma omp parallel for default(none) shared(A, x, y, M, N)
-	for (int i=0; i<M; i++) {
+  #pragma omp parallel for default(none) shared(A, x, y, M, N) private(i,j)
+	for (i=0; i<M; i++) {
 		double sum = 0;
-	  for (int j=0; j<N; j++) {
+	  for (j=0; j<N; j++) {
 			sum += A[i][j] * x[j];
 		}
     y[i] = sum;
@@ -104,10 +104,10 @@ int main(int argc, char *argv[]) {
 
   t1 = omp_get_wtime();
 	// Including the parallel for in the internal loop
-	for (int i=0; i<M; i++) {
+	for (i=0; i<M; i++) {
 		double sum = 0;
-    #pragma omp parallel for default(none) shared(A, x, y, M, N, i) reduction(+:sum)
-	  for (int j=0; j<N; j++) {
+    #pragma omp parallel for default(none) shared(A, x, y, M, N, i) private(j) reduction(+:sum)
+	  for (j=0; j<N; j++) {
 			sum += A[i][j] * x[j];
 		}
     y[i] = sum;
