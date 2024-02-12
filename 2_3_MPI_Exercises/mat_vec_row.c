@@ -41,15 +41,7 @@ int main(int argc, char *argv[]) {
   }
   // Sending M and N from process 0 to the other processes
   int v[2] ={M,N};
-  if (rank == 0) {
-    for (i=1; i<size; i++) {
-      // ...
-    }
-  } else {
-    // ...
-    M = v[0];
-    N = v[1];
-  }
+  // ...
   ML = M / size;
   NL = N / size;
   printf ("M(%d) = %d , N(%d) = %d , ML(%d) = %d , NL(%d) = %d\n", 
@@ -101,21 +93,7 @@ int main(int argc, char *argv[]) {
   // Parallel implementation
   //
 
-  double AL[M][NL], xG[N], xL[NL], yG[M], yL[ML];
-  
-  // Defining the datatype for column distribution
-  MPI_Datatype Type_Send_Col_A, Type_Send_Col_B, Type_Recv_Col_A, Type_Recv_Col_B;
-  // Datatype for sender
-  MPI_Type_vector(M, 1, N, MPI_DOUBLE, &Type_Send_Col_A);
-  MPI_Type_commit(&Type_Send_Col_A);
-  MPI_Type_create_resized(Type_Send_Col_A, 0, 1*sizeof(double), &Type_Send_Col_B);
-  MPI_Type_commit(&Type_Send_Col_B);
-  // Datatype for receiver
-  MPI_Type_vector(M, 1, NL, MPI_DOUBLE, &Type_Recv_Col_A);
-  MPI_Type_commit(&Type_Recv_Col_A);
-  MPI_Type_create_resized(Type_Recv_Col_A, 0, 1*sizeof(double), &Type_Recv_Col_B);
-  MPI_Type_commit(&Type_Recv_Col_B);
-
+  double AL[ML][N], xG[N], xL[NL], yG[M], yL[ML];
   
   // Getting the first tick
   // Synchronization of processes
@@ -133,9 +111,9 @@ int main(int argc, char *argv[]) {
   // Synchronization of processes
   t1 = ...
 
-  // Computing the local product
+  // Gathering xL to xG on all processes
   // ...
-  // Accumulate the local products and distribute the solution
+  // Computing the local product
   // ...
 
   // Getting the final tick and calculating performance indices

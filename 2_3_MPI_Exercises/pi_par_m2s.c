@@ -14,6 +14,7 @@ int main(int argc, char *argv[]) {
   if (rc != ...) {
     printf ("Error starting MPI program. Terminating.\n");
     // Aborting the execution
+    // ...
   }
   // Get the rank of the process
   // ...
@@ -32,16 +33,17 @@ int main(int argc, char *argv[]) {
       printf("Wrong number of parameters\n");
       printf("mpirun -np ?? ./a.out [ num_steps [ loc_num_steps ] ]\n");
       // Aborting the execution
+      // ...
     }
   }
   // Sending num_steps and loc_num_steps from process 0 to the other processes
   int v[2] ={num_steps,loc_num_steps};
   if (rank == 0) {
     for (i=1; i<size; i++) {
-      // ...
+      // ... sending v to Pi
     }
   } else {
-    // ...
+    // ... receiving v from P0
     num_steps = v[0];
     loc_num_steps = v[1];
   }
@@ -92,46 +94,47 @@ int main(int argc, char *argv[]) {
 
   // Computation of pi
   if (rank == 0) {
-    int frs_step = 0, snt_steps = 0;
+    int frs_step = 0, cnt_steps = 0;
     
     // Process 0 send an initial interval to each process
     for (i=1; i<size; i++) {
-      snt_steps = ((frs_step + loc_num_steps) > num_steps)? 
+      cnt_steps = ((frs_step + loc_num_steps) > num_steps)? 
                              (num_steps-frs_step): loc_num_steps;
-      // sending frs_step
-      frs_step += snt_steps;
+      // ... sending frs_step
+      frs_step += cnt_steps;
     }
     pi = 0.0;
     // Process 0 receives the calculations and sends the rest of the intervals 
     while (frs_step < num_steps) {
-      // receiving sum
+      // ... receiving sum from Px
       pi += sum;
-      snt_steps = ((frs_step + loc_num_steps) > num_steps)? 
+      cnt_steps = ((frs_step + loc_num_steps) > num_steps)? 
                              (num_steps-frs_step): loc_num_steps;
-      // sending frs_step
-      frs_step += snt_steps;
+      // ... sending frs_step to Px
+      frs_step += cnt_steps;
     }
-    printf ("%d\n", snt_steps);
+    printf ("%d\n", cnt_steps);
     // Process 0 receives the calculations and sends poisons to the workers
     for (i=1; i<size; i++) {
-      // receiving sum
+      // ... receiving sum from Px
       pi += sum;
-      // sending frs_step
+      // ... sending poison to Px
     }
     pi *= step;
   } else {
-    int frs_step = 0, snt_steps = 0;
+    int frs_step = 0, cnt_steps = 0;
     step = 1.0 / (double) num_steps;  
     // Each process receives the initial interval 
-    // receiving frs_step
+    // ... receiving frs_step from P0
     // Each process sends the calculations and receive a new interval 
     do {
-      snt_steps = ((frs_step + loc_num_steps) > num_steps)? 
+      cnt_steps = ((frs_step + loc_num_steps) > num_steps)? 
                              (num_steps-frs_step): loc_num_steps;
       // Local computation of pi
-      // interval from frs_step, and executing snt_steps iterations
-      // sending sum
-      // receiving frs_step
+      // ... computing interval from frs_step snd executig cnt_steps iterations
+interval from frs_step, and executing cnt_steps iterations
+      // ... sending sum to P0
+      // ... receiving frs_step from P0
       // The loop finalizes when a poison arrives
     } while (st.MPI_TAG != 99);
   }
