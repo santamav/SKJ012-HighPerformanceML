@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
   // Get the rank of the process
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   // Get the number of processes
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_Size(MPI_COMM_WORLD, &size);;
 
   // Adjust the number of rectangules
   int num_steps = 100000, loc_num_steps = 1000;
