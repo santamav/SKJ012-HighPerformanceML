@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
     char *mpi_program = argv[1];
 
     // Array of process counts
-    int process_counts[] = {1, 2, 4, 8};
+    int process_counts[] = {/*1,*/ 2, 4, 8};
     int num_processes = sizeof(process_counts) / sizeof(process_counts[0]);
 
     int rectangles[] = {1e7, 5e7, 1e8, 5e8};
