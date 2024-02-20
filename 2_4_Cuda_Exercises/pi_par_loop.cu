@@ -7,19 +7,13 @@
 int main(int argc, char *argv[]) {
   double t1, t2, t_seq, t_par, sp, ep;
 
-  // Adjust the number of active threads 
-  // and the number of rectangules
+  // Adjust the number of rectangules
   int num_steps = 100000;
   if (argc == 2) {
-    int param1 = atoi(argv[1]);
-    omp_set_num_threads(param1);
-  } else if (argc == 3) {
-    int param1 = atoi(argv[1]);
-    omp_set_num_threads(param1);
-    num_steps = atoi(argv[2]);
-  } else if (argc > 3) {
+    num_steps = atoi(argv[1]);
+  } else if (argc > 2) {
     printf("Wrong number of parameters\n");
-    printf("./a.out [ num_threads [ num_steps ] ]\n");
+    printf("./a.out [ num_steps ]\n");
     exit(-1);
   }
 

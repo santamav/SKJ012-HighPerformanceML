@@ -1,7 +1,7 @@
 #include <stdio.h> 
 
 __global__ void mykernel( void ) {
-
+  
 }
 
 int main( int argc, char *argv[] ) {  
