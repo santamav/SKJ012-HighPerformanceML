@@ -5,7 +5,10 @@
 // ... 
 
 int main(int argc, char *argv[]) {
-  double t1, t2, t_seq, t_par, sp, ep;
+  float t_seq, t_par, sp, ep;
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
 
   // Adjust the number of rectangules
   int num_steps = 100000;
@@ -29,15 +32,17 @@ int main(int argc, char *argv[]) {
   // Sequential implementation
   //
   double x, sum = 0.0;
-  t1 = ....
+  cudaEventRecord(start);
   step = 1.0 / (double) num_steps;  
   for (i=0; i<num_steps; i++){
      x = (i+0.5)*step;
      sum = sum + 4.0/(1.0+x*x);
   }
   pi = step * sum;
-  t2 = ...
-  t_seq = (t2-t1);
+  cudaEventRecord(stop);
+  cudaEventSynchronize(stop);
+  t_seq = 0.0;
+  cudaEventElapsedTime(&t_seq, start, stop);
 
   printf(" pi_seq = %20.15f\n", pi);
   printf(" time_seq = %20.15f\n", t_seq);
@@ -49,13 +54,15 @@ int main(int argc, char *argv[]) {
   // Defining the number of active threads
   int size = 0;
   
-  t1 = ...
+  cudaEventRecord(start);
   // Call to the CUDA 
   // ...
-  t2 = ...
-  t_par = ...
-  sp = ...
-  ep = ...
+  cudaEventRecord(stop);
+  cudaEventSynchronize(stop);
+  t_par = 0.0; 
+  cudaEventElapsedTime(&t_par, start, stop);
+  sp = t_seq / t_par;
+  ep = sp / size;
 
   printf(" pi_par = %20.15f\n", pi);
   printf(" time_par = %20.15f, Sp = %20.15f , Ep = %20.15f\n", t_par, sp, ep);

@@ -93,27 +93,29 @@ int main(int argc, char *argv[]) {
   // Defining the number of active threads
   int size = num_blocks * num_threads;
   sum = 0.0;
-  cudaEventRecord(start);
+  t_par = 0.0;
   // Call to the CUDA 
   //Allocate memory on the device
   double *d_sum;
   cudaMalloc((void**)&d_sum, sizeof(double));
   //Initialize the device memory
   cudaMemset(d_sum, 0, sizeof(double));
+  cudaEventRecord(start, 0);
   //Launch the kernel
   accumulate_pi<<<num_blocks, num_threads>>>(d_sum, num_steps, step);
+  cudaEventRecord(stop, 0);
+  cudaEventSynchronize(stop);
+  cudaEventElapsedTime(&t_par, start, stop);
   //Copy the result from device to host
   cudaMemcpy(&sum, d_sum, sizeof(double), cudaMemcpyDeviceToHost);
-  //Free the device memory
-  cudaFree(d_sum);
   pi = step * sum;
-  cudaEventRecord(stop);
-  cudaEventSynchronize(stop);
-  t_par = 0.0;
-  cudaEventElapsedTime(&t_par, start, stop);
+  
   sp = t_seq / t_par;
   ep = sp / size;
 
   printf(" pi_par = %20.15f\n", pi);
   printf(" time_par = %20.15f, Sp = %20.15f , Ep = %20.15f\n", t_par, sp, ep);
+  
+  //Free the device memory
+  cudaFree(d_sum);
 }
