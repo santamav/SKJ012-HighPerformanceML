@@ -61,7 +61,6 @@ class ThreeLayerConvNet(object):
         # **the width and height of the input are preserved**. Take a look at      #
         # the start of the loss() function to see how that happens.                #
         ############################################################################
-        # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         self.params['W1'] = weight_scale * np.random.randn(num_filters, input_dim[0], filter_size, filter_size)
         self.params['b1'] = np.zeros(num_filters)
         self.params['W2'] = weight_scale * np.random.randn(num_filters * input_dim[1]//2 * input_dim[2]//2, hidden_dim)
@@ -88,6 +87,7 @@ class ThreeLayerConvNet(object):
 
         # pass conv_param to the forward pass for the convolutional layer
         # Padding and stride chosen to preserve the input spatial size
+
         filter_size = W1.shape[2]
         conv_param = {"stride": 1, "pad": (filter_size - 1) // 2}
 
