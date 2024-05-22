@@ -107,6 +107,11 @@ def matmul_cblas(lib, a, b, c=None):
     # https://netlib.org/lapack/explore-html/de/da0/cblas_8h_a1446cddceb275e7cd299157a5d61d5e4.html 
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    lib.cblas_sgemm(ctypes.c_int(order), ctypes.c_int(trans_a), ctypes.c_int(trans_b),
+                    ctypes.c_int(m), ctypes.c_int(n), ctypes.c_int(k),
+                    ctypes.c_float(alpha), a.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), ctypes.c_int(lda),
+                    b.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), ctypes.c_int(ldb),
+                    ctypes.c_float(beta), c.ctypes.data_as(ctypes.POINTER(ctypes.c_float)), ctypes.c_int(ldc))
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #

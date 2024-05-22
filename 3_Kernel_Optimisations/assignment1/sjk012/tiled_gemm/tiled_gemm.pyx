@@ -26,23 +26,21 @@ cdef matmul_tiled_cython_inner(np.ndarray[np.float32_t, ndim=2] a,
     # Parallelize the loop via prange.                                        #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    
-    for m_ in prange(0, m, block_size, nogil=True, schedule='static'):
-       for n_ in range((n - 1) // block_size + 1):
-            nc_ = n_ * block_size 
-            for k_ in range((k - 1) // block_size + 1):
-                kc_ = k_ * block_size
-                m_upper = min(m_ + block_size, m)
-                n_upper = min(nc_ + block_size, n)
-                k_upper = min(kc_ + block_size, k)
-
-                for i in range(m_, m_upper):
-                    for j in range (nc_, n_upper):
-                        temp = 0
-                        for l in range (kc_, k_upper):
-                            temp += a[i,l] * b[l,j]
-                        c[i,j] += temp 
+   
+    for nn in prange(N, nogil=True):
+        for cc in range(C):
+            for ii in range(filter_height):
+                for jj in range(filter_width):
+                    row = cc * filter_height * filter_width + ii * filter_width + jj
+                    for yy in range(HH):
+                        for xx in range(WW):
+                            col = nn * HH * WW + yy * WW + xx
+                            x_x = xx * stride - padding + jj
+                            x_y = yy * stride - padding + ii
+                            if x_x >= 0 and x_x < W and x_y >= 0 and x_y < H:
+                                cols[row, col] = x[nn, cc, x_y, x_x]
+                            else:
+                                cols[row, col] = 0
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################

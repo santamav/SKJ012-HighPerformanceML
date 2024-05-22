@@ -22,6 +22,11 @@ cdef relu_bwd_cython_inner(np.ndarray[np.float32_t, ndim=1] dx,
     # Parallelize the loop using prange.                                      #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    for i in prange(dx.shape[0], nogil=True):
+        if mask[i] != 0:
+            dx[i] = dy[i]
+        else:
+            dx[i] = 0.0
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #

@@ -24,6 +24,13 @@ cdef relu_fwd_cython_inner_float32(np.ndarray[np.float32_t, ndim=1] x,
     # Parallelize the loop using prange.                                      #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    for i in prange(x.shape[0], nogil=True):
+        if x[i] > 0:
+            max[i] = x[i]
+            mask[i] = 1
+        else:
+            max[i] = 0
+            mask[i] = 0
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #

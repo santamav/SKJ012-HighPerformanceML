@@ -28,6 +28,7 @@ def fc_forward(x, w, b):
     # declared in operations.py.  Store the result in out.                    #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    out = matmul(x.reshape(x.shape[0], -1), w) + b
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -75,6 +76,9 @@ def fc_backward(dy, cache):
     #    to the bias gradient.                                                #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    dx = matmul(dy, w.T).reshape(x_shape)
+    dw = matmul(x.reshape(x.shape[0], -1).T, dy)
+    db = dy.sum(axis=0)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -99,6 +103,7 @@ def relu_forward_numpy(x):
     # and the numpy vector comparison operator                                #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    out = np.maximum(0, x)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -125,6 +130,8 @@ def relu_forward_cython(x):
     # available in operations.py                                              #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    out, cache = relu_fwd_cython(x)
+    y = out
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -149,6 +156,7 @@ def relu_backward_numpy(dy, cache):
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    dx = dy * (mask > 0)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -173,6 +181,7 @@ def relu_backward_cython(dy, cache):
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    dx = relu_bwd_cython(dy, mask)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -241,11 +250,32 @@ def conv_forward_numpy(x, w, b, conv_param):
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-    ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
-    
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+
+    # Calculate the output dimensions
+    H_out = 1 + (H + 2 * pad - HH) // stride
+    W_out = 1 + (W + 2 * pad - WW) // stride
+
+    # Pad the input
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+
+    # Initialize the output
+    out = np.zeros((N, F, H_out, W_out))
+
+    # Perform the convolution
+    for i in range(N):
+      for j in range(F):
+        for k in range(H_out):
+          for l in range(W_out):
+            # Extract the receptive field
+            receptive_field = x_padded[i, :, k*stride:k*stride+HH, l*stride:l*stride+WW]
+            # Perform the dot product between the receptive field and the filter
+            out[i, j, k, l] = np.sum(receptive_field * w[j]) + b[j]
+
     cache = (x, w, b, conv_param)
     return out, cache
 
@@ -261,7 +291,31 @@ def conv_forward_cython(x, w, b, conv_param):
     # and padding.                                                            #
     # Return the output tensor.                                               #
     ###########################################################################
-    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****     
+    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****  
+    # Convert input tensor into columns
+        # Extract parameters from conv_param
+    stride = conv_param['stride']
+    padding = conv_param['pad']
+
+    # Get dimensions of input and filters
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+
+    # Compute output dimensions
+    H_out = 1 + (H + 2 * padding - HH) // stride
+    W_out = 1 + (W + 2 * padding - WW) // stride
+
+    # Reshape the weights to a 2D array (F, C * HH * WW)
+    w_reshaped = w.reshape(F, -1)
+
+    # Perform im2col transformation
+    x_cols = im2col_cython(x, HH, WW, padding, stride)
+
+    # Perform convolution by matrix multiplication
+    out = np.dot(w_reshaped, x_cols) + b.reshape(-1, 1)
+
+    # Reshape the output to the correct shape (N, F, H_out, W_out)
+    out = out.reshape(F, N, H_out, W_out).transpose(1, 0, 2, 3)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -288,6 +342,37 @@ def conv_backward_numpy(dy, cache):
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    x, w, b, conv_param = cache
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+    
+    N, C, H, W = x.shape
+    F, _, HH, WW = w.shape
+    N, F, H_out, W_out = dy.shape
+    
+    # Initialize the gradients
+    dx = np.zeros_like(x)
+    dw = np.zeros_like(w)
+    db = np.zeros_like(b)
+    
+    # Pad the input
+    x_padded = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+    dx_padded = np.pad(dx, ((0, 0), (0, 0), (pad, pad), (pad, pad)), mode='constant')
+    
+    # Perform the backward pass
+    for i in range(N):
+        for j in range(F):
+            for k in range(H_out):
+                for l in range(W_out):
+                    # Extract the receptive field
+                    receptive_field = x_padded[i, :, k*stride:k*stride+HH, l*stride:l*stride+WW]
+                    # Update the gradients
+                    dx_padded[i, :, k*stride:k*stride+HH, l*stride:l*stride+WW] += w[j] * dy[i, j, k, l]
+                    dw[j] += receptive_field * dy[i, j, k, l]
+                    db[j] += dy[i, j, k, l]
+                    
+    # Remove padding from dx
+    dx = dx_padded[:, :, pad:-pad, pad:-pad]
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -317,6 +402,29 @@ def conv_backward_cython(dy, cache):
     # Use the im2col_numpy function to convert the input tensor into columns.
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    x_shape, x_cols, w, b, conv_param = cache
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+    
+    N, C, H, W = x_shape
+    F, _, HH, WW = w.shape
+    
+    # Reshape the weights to a 2D array (F, C * HH * WW)
+    w_reshaped = w.reshape(F, -1)
+    
+    # Compute db
+    db = np.sum(dy, axis=(0, 2, 3))
+    
+    # Perform im2col transformation on dy
+    dy_reshaped = dy.transpose(1, 0, 2, 3).reshape(F, -1)
+    
+    # Compute dw
+    dw = np.dot(dy_reshaped, x_cols.T).reshape(w.shape)
+    
+    # Compute dx
+    dx_cols = np.dot(w_reshaped.T, dy_reshaped)
+    dx = col2im_cython(dx_cols, N, C, H, W, HH, WW, pad, stride)
+  
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -350,6 +458,22 @@ def max_pool_forward_numpy(x, pool_param):
     # TODO: Implement the max-pooling forward pass                            #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    stride = pool_param['stride']
+
+    N, C, H, W = x.shape
+
+    H_out = 1 + (H - pool_height) // stride
+    W_out = 1 + (W - pool_width) // stride
+
+    out = np.zeros((N, C, H_out, W_out))
+
+    for i in range(H_out):
+      for j in range(W_out):
+        x_slice = x[:, :, i*stride:i*stride+pool_height, j*stride:j*stride+pool_width]
+        out[:, :, i, j] = np.max(x_slice, axis=(2, 3))
+    
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -384,6 +508,18 @@ def max_pool_forward_cython(x, pool_param):
     # TODO: Implement the max-pooling forward pass                            #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    pool_width = pool_param['pool_width']
+    pool_height = pool_param['pool_height']
+    stride = pool_param['stride']
+    padding = pool_param['padding']
+    
+    out, idx_max = max_pool_fwd_cython(x, pool_height, pool_width, padding, stride)
+    
+    N, C, H, W = x.shape
+    H_out = 1 + (H - pool_height) // stride
+    W_out = 1 + (W - pool_width) // stride
+    out = out.reshape(N, C, H_out, W_out)
+
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -407,6 +543,23 @@ def max_pool_backward_numpy(dout, cache):
     # TODO: Implement the max-pooling backward pass                           #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    x, pool_param = cache
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    stride = pool_param['stride']
+    
+    N, C, H, W = x.shape
+    N, C, H_out, W_out = dout.shape
+    
+    dx = np.zeros_like(x)
+    
+    for i in range(N):
+        for j in range(C):
+            for k in range(H_out):
+                for l in range(W_out):
+                    x_slice = x[i, j, k*stride:k*stride+pool_height, l*stride:l*stride+pool_width]
+                    mask = x_slice == np.max(x_slice)
+                    dx[i, j, k*stride:k*stride+pool_height, l*stride:l*stride+pool_width] += mask * dout[i, j, k, l]
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -430,6 +583,15 @@ def max_pool_backward_cython(dy, cache):
     # TODO: Implement the max-pooling backward pass                           #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    idx_max, x_shape, pool_param = cache
+    pool_height = pool_param['pool_height']
+    pool_width = pool_param['pool_width']
+    stride = pool_param['stride']
+    padding = pool_param['padding']
+    
+    N, C, H, W = x_shape
+    
+    dx = max_pool_bwd_cython(dy, idx_max, N, H, W, C, pool_height, pool_width, padding, stride)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -507,6 +669,22 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # might prove to be helpful.                                          #
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        # Compute sample mean and variance
+        sample_mean = np.mean(x, axis=0)
+        sample_var = np.var(x, axis=0)
+
+        # Normalize the input data
+        x_norm = (x - sample_mean) / np.sqrt(sample_var + eps)
+
+        # Scale and shift the normalized data
+        out = gamma * x_norm + beta
+
+        # Update running mean and variance
+        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        running_var = momentum * running_var + (1 - momentum) * sample_var
+
+        # Store intermediate values for backward pass
+        cache = (x, x_norm, sample_mean, sample_var, gamma, beta, eps)
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
         #                           END OF YOUR CODE                          #
@@ -520,6 +698,10 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # Store the result in the out variable.                               #
         #######################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        # Normalize the input data using running mean and variance
+        x_norm = (x - running_mean) / np.sqrt(running_var + eps)
+        # Scale and shift the normalized data
+        out = gamma * x_norm + beta
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         #######################################################################
         #                          END OF YOUR CODE                           #
@@ -712,6 +894,8 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     # Your implementation should be very short; ours is less than five lines. #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    out, cache = batchnorm_forward(x.transpose(0, 2, 3, 1).reshape(-1, x.shape[1]))
+    out = out.reshape(x.shape[0], x.shape[2], x.shape[3], x.shape[1]).transpose(0, 3, 1, 2)
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
