@@ -10,6 +10,7 @@ from sjk012.data_utils import get_CIFAR10_data
 from sjk012.layers import *
 from sjk012.solver import Solver
 import pyximport
+from mpi4py import MPI
 
 """
 1. From the jupyter lab project, develop a standalone python module that is able to execute the neural network in your computer. 
@@ -85,30 +86,46 @@ def build_model(data, num_epochs=1, batch_size=50):
         verbose=True, print_every=20)
     return model, solver
 
-def show_results(solver, data):
+def show_results(solver, data, start_time, end_time):
     # Print final training accuracy.
     print(
         "Training accuracy:",
-        solver.check_accuracy(data['X_train'].astype(np.float32), data['y_train'])
+        "{:.4f}".format(solver.check_accuracy(data['X_train'].astype(np.float32), data['y_train']))
     )
     # Print final validation accuracy.
     print(
         "Validation accuracy:",
-        solver.check_accuracy(data['X_val'].astype(np.float32), data['y_val'])
+        "{:.4f}".format(solver.check_accuracy(data['X_val'].astype(np.float32), data['y_val']))
     )
-    # Shoud we plot the results for the report?
+    print("Execution time: ", "{:.4f}".format(end_time - start_time))
 
 def main():
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
     # Prepare the dependencies
     prepare_dependencies()
-    # Import the data
-    data = get_data()
+    
+    if rank == 0:
+        # Import the data
+        data = get_data()
+        # Distribute the data between the processes
+        data['X_train'] = np.array_split(data['X_train'], comm.Get_size())[rank]
+        data['y_train'] = np.array_split(data['y_train'], comm.Get_size())[rank]
+        data['X_val'] = np.array_split(data['X_val'], comm.Get_size())[rank]
+        data['y_val'] = np.array_split(data['y_val'], comm.Get_size())[rank]
+    else:
+        data = None
+    data = comm.bcast(data, root=0)
+    
     # Prepare the model for training
     model, solver = build_model(data)
     # Train the model
+    start_time = MPI.Wtime()
     solver.train()
+    end_time = MPI.Wtime()
     # Check the model's results
-    show_results(solver, data)
+    if rank == 0:
+        show_results(solver, data, start_time, end_time)
 
 if __name__ == "__main__":
     main()

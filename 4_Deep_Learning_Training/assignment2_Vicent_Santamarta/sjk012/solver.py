@@ -8,6 +8,8 @@ import numpy as np
 
 from sjk012 import optim
 
+from mpi4py import MPI
+
 
 class Solver(object):
     """
@@ -177,8 +179,17 @@ class Solver(object):
         # Compute loss and gradient
         loss, grads = self.model.loss(X_batch, y_batch)
         self.loss_history.append(loss)
+        
+        # Setup mpi
+        comm = MPI.COMM_WORLD
+        size = comm.Get_size()
+        
+        # Communicate gradients
+        for k, v in grads.items():
+            comm.Allreduce(MPI.IN_PLACE, v, op=MPI.SUM)
+            grads[k] = v / size
 
-        # Perform a parameter update
+        # Update the parameters
         for p, w in self.model.params.items():
             dw = grads[p]
             config = self.optim_configs[p]
